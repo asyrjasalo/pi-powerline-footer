@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Native bash/fish completion over SSH** — Run completion helpers with non-interactive `shell -c` instead of `shell -ic` so subprocesses do not grab the controlling TTY (avoids the parent pi process stopping with SIGTTIN in job-control sessions).
+
 ## [0.4.13] - 2026-04-20
 
 ### Fixed

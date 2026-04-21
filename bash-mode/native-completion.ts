@@ -194,7 +194,7 @@ export class FishNativeCompletionAdapter implements NativeCompletionAdapter {
   async getCompletions(request: CompletionRequest): Promise<ExtendedCompletionItem[]> {
     const stdout = await runProcess(
       request.shellPath,
-      ["-ic", `complete --do-complete ${quoteShellArg(request.line)}`],
+      ["-c", `complete --do-complete ${quoteShellArg(request.line)}`],
       request.cwd,
       process.env,
       request.signal,
@@ -267,7 +267,7 @@ if [ -f /etc/bash_completion ]; then . /etc/bash_completion; fi
   compgen -A file -- "$TOKEN"
 } | awk 'NF' | awk '!seen[$0]++'
 `;
-    const stdout = await runProcess(request.shellPath, ["-ic", script], request.cwd, process.env, request.signal);
+    const stdout = await runProcess(request.shellPath, ["-c", script], request.cwd, process.env, request.signal);
     return uniqueSuggestions(stdout.split("\n")).map((rawValue) => {
       const value = appendDirectorySuffix(request.cwd, rawValue);
       return {
