@@ -2,8 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+- **Shell completion and ghost text disabled** — Sticky bash mode and one-off `!` / `!!` prompts no longer use shell-native Tab completion or inline ghost suggestions, so commands like `!ls` are not expanded into longer matches (e.g. `!lsattr`). Default pi autocomplete behavior is unchanged.
+
 ### Fixed
-- **Native bash/fish completion over SSH** — Run completion helpers with non-interactive `shell -c` instead of `shell -ic` so subprocesses do not grab the controlling TTY (avoids the parent pi process stopping with SIGTTIN in job-control sessions).
+- **Native bash/fish completion over SSH** — Spawn completion helpers with `detached: true` so they get a new process group and are less likely to steal the parent TTY (SIGTTIN), while using interactive `bash -ic` / `fish -ic` again so `bash_completion` and fish completions load correctly in non-login capture runs.
+- **Shell history autocomplete for one-token commands** — History matches now rank entries whose first word equals the typed token (e.g. `ls`, `ls -la`) ahead of commands that only share a prefix (e.g. `lsattr`), and bare `ls` ahead of `ls …`, so `!ls` does not default to `lsattr` when `lsattr` was run more recently.
 
 ## [0.4.13] - 2026-04-20
 

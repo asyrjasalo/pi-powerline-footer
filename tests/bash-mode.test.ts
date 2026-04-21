@@ -71,6 +71,20 @@ test("matchHistoryEntries returns newest entries when the prefix is empty", () =
   assert.deepEqual(matches, ["git stash", "git status", "git fetch"]);
 });
 
+test("matchHistoryEntries prefers exact command name over longer names sharing a prefix (ls vs lsattr)", () => {
+  const matches = matchHistoryEntries(
+    [
+      "lsattr -l",
+      "ls -la",
+      "ls",
+    ],
+    "ls",
+    5,
+  );
+
+  assert.deepEqual(matches, ["ls", "ls -la", "lsattr -l"]);
+});
+
 test("one-off bash command context strips ! and !! prefixes", () => {
   assert.deepEqual(getOneOffBashCommandContext("!git status"), {
     prefix: "!",

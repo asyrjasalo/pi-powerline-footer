@@ -285,11 +285,7 @@ export class BashModeEditor extends CustomEditor {
     this.clearGhostSuggestion();
   }
 
-  private triggerBashAutocomplete(): void {
-    if ("requestAutocomplete" in this && typeof this.requestAutocomplete === "function") {
-      this.requestAutocomplete({ force: false, explicitTab: false });
-    }
-  }
+  private triggerBashAutocomplete(): void {}
 
   private scheduleGhostUpdate(): void {
     const text = this.getExpandedText();

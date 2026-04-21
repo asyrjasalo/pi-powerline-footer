@@ -128,10 +128,22 @@ export function readGlobalShellHistory(shellPath: string): string[] {
   }
 }
 
+function firstToken(line: string): string {
+  const m = line.trim().match(/^[^\s]+/);
+  return m?.[0] ?? "";
+}
+
+/** Single-line command prefix with no spaces (e.g. `ls` in `!ls`), not a path or substitution. */
+function isSimpleCommandPrefix(prefix: string): boolean {
+  return Boolean(prefix) && !/[\s/'"`$]/.test(prefix);
+}
+
 export function matchHistoryEntries(entries: string[], prefix: string, limit: number): string[] {
   const trimmedPrefix = prefix.trim();
   const seen = new Set<string>();
   const matches: string[] = [];
+
+  const maxCollect = trimmedPrefix ? 200 : limit;
 
   for (const rawEntry of entries) {
     const entry = rawEntry?.trim();
@@ -139,8 +151,29 @@ export function matchHistoryEntries(entries: string[], prefix: string, limit: nu
     if (trimmedPrefix && !entry.startsWith(trimmedPrefix)) continue;
     seen.add(entry);
     matches.push(entry);
-    if (matches.length >= limit) break;
+    if (matches.length >= maxCollect) break;
   }
 
-  return matches;
+  if (!trimmedPrefix) {
+    return matches.slice(0, limit);
+  }
+
+  if (!isSimpleCommandPrefix(trimmedPrefix)) {
+    return matches.slice(0, limit);
+  }
+
+  const exactFirstTok: string[] = [];
+  const rest: string[] = [];
+  for (const e of matches) {
+    if (firstToken(e) === trimmedPrefix) exactFirstTok.push(e);
+    else rest.push(e);
+  }
+
+  exactFirstTok.sort((a, b) => {
+    if (a === trimmedPrefix && b !== trimmedPrefix) return -1;
+    if (b === trimmedPrefix && a !== trimmedPrefix) return 1;
+    return 0;
+  });
+
+  return [...exactFirstTok, ...rest].slice(0, limit);
 }

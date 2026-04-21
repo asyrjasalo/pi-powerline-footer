@@ -5,20 +5,13 @@ import {
   type Theme,
 } from "@mariozechner/pi-coding-agent";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
-import { type AutocompleteProvider, type SelectItem, SelectList, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { type SelectItem, SelectList, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 
 import type { ColorScheme, SegmentContext, StatusLinePreset, StatusLineSegmentId } from "./types.js";
 import { BashTranscriptStore } from "./bash-mode/transcript.ts";
-import {
-  BashCompletionEngine,
-  BashAutocompleteProvider,
-  getOneOffBashCommandContext,
-  ModeAwareAutocompleteProvider,
-  OneOffBashAutocompleteProvider,
-} from "./bash-mode/completion.ts";
 import { BashModeEditor } from "./bash-mode/editor.ts";
 import { ManagedShellSession } from "./bash-mode/shell-session.ts";
 import { matchHistoryEntries, readGlobalShellHistory, readProjectHistory, appendProjectHistory } from "./bash-mode/history.ts";
@@ -729,7 +722,6 @@ export default function powerlineFooter(pi: ExtensionAPI) {
   let currentEditor: any = null;
   let bashModeActive = false;
   let bashTranscript = new BashTranscriptStore(bashModeSettings);
-  let bashCompletionEngine = new BashCompletionEngine();
   let shellSession: ManagedShellSession | null = null;
   
   // Cache for responsive layout (shared between editor and widget for consistency)
@@ -894,7 +886,6 @@ export default function powerlineFooter(pi: ExtensionAPI) {
     stashedPromptHistory = readPersistedStashHistory();
     bashModeActive = false;
     bashTranscript = new BashTranscriptStore(bashModeSettings);
-    bashCompletionEngine = new BashCompletionEngine();
 
     getThinkingLevelFn = typeof ctx.getThinkingLevel === "function"
       ? () => ctx.getThinkingLevel()
@@ -1646,42 +1637,10 @@ export default function powerlineFooter(pi: ExtensionAPI) {
         },
         onNotify: (message, level = "info") => ctx.ui.notify(message, level),
         getHistoryEntries: (prefix) => getShellHistoryEntries(prefix),
-        resolveGhostSuggestion: async (text, signal) => {
-          const oneOffBash = getOneOffBashCommandContext(text);
-          if (oneOffBash) {
-            const ghost = await bashCompletionEngine.getGhostSuggestion(
-              oneOffBash.command,
-              getShellCwd(),
-              getShellPath(),
-              signal,
-            );
-            return ghost ? { ...ghost, value: `${oneOffBash.prefix}${ghost.value}` } : null;
-          }
-
-          return bashCompletionEngine.getGhostSuggestion(text, getShellCwd(), getShellPath(), signal);
-        },
+        resolveGhostSuggestion: async () => null,
       });
 
-      const attachAutocompleteProvider = (): boolean => {
-        if (editor.hasWrappedProvider()) return true;
-        const defaultProvider = (editor as unknown as { autocompleteProvider?: AutocompleteProvider }).autocompleteProvider;
-        if (!defaultProvider) return false;
-
-        const bashProvider = new BashAutocompleteProvider(
-          bashCompletionEngine,
-          () => getShellPath(),
-          () => getShellCwd(),
-        );
-        const oneOffBashProvider = new OneOffBashAutocompleteProvider(
-          bashCompletionEngine,
-          () => getShellPath(),
-          () => getShellCwd(),
-        );
-        editor.installAutocompleteProvider(
-          new ModeAwareAutocompleteProvider(defaultProvider, bashProvider, oneOffBashProvider, () => bashModeActive),
-        );
-        return true;
-      };
+      const attachAutocompleteProvider = (): boolean => true;
 
       currentEditor = editor;
       trackPromptHistory(editor);
@@ -1690,7 +1649,7 @@ export default function powerlineFooter(pi: ExtensionAPI) {
 
       const originalHandleInput = editor.handleInput.bind(editor);
       editor.handleInput = (data: string) => {
-        if (!autocompleteFixed && !(editor as unknown as { autocompleteProvider?: AutocompleteProvider }).autocompleteProvider) {
+        if (!autocompleteFixed && !(editor as unknown as { autocompleteProvider?: unknown }).autocompleteProvider) {
           autocompleteFixed = true;
           snapshotPromptHistory(editor);
           ctx.ui.setEditorComponent(editorFactory);
